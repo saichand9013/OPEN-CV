@@ -2,53 +2,72 @@ import numpy as np
 import cv2
 
 # Load the face and eye Haar cascade classifiers
-face_classifier = cv2.CascadeClassifier(r"C:\Users\Sai\A in Acodes\data science\14. opencv\haarcascade\haarcascade_frontalface_default.xml")
+face_cascade = cv2.CascadeClassifier(r"C:\Users\Sai\A in Acodes\data science\14. opencv\haarcascade\haarcascade_frontalface_default.xml")
 
-eye_classifier = cv2.CascadeClassifier(r"C:\Users\Sai\A in Acodes\data science\14. opencv\haarcascade\haarcascade_eye.xml")
+eye_cascade = cv2.CascadeClassifier(r"C:\Users\Sai\A in Acodes\data science\14. opencv\haarcascade\haarcascade_eye.xml")
 
-#image = cv2.imread(r"D:\NIT\1_NIT_Batches\10_WORKSHOP\2024 - WORKSHOP\7_Exploring...
+# Check if the cascade files were loaded properly
+if face_cascade.empty():
+    print("Error: Could not load face cascade classifier.")
+    exit()
 
-# Load the image
-#img = cv2.imread(r"C:\Users\A3MAX_SOFTWARE_TECH\Desktop\WORK\1_KODI WORK\1_NARI...
+if eye_cascade.empty():
+    print("Error: Could not load eye cascade classifier.")
+    exit()
 
-#img = cv2.imread(r"D:\NIT\1_NIT_Batches\10_WORKSHOP\2024 - WORKSHOP\7_Explorin...
+# Function to detect faces and eyes in the frame
+def detect_faces_and_eyes(gray, frame):
+    # Detect faces in the grayscale image
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
 
-img = cv2.imread(r"C:\Users\Sai\A in Acodes\data science\14. opencv\haarcascade\selfie.jpg") 
+    for (x, y, w, h) in faces:
+        # Draw rectangle around the face
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
-#img = cv2.imread(r"C:\Users\Admin\Desktop\NIT\1_NIT_Batches\10_WORKSHOP\2024 -...
+        # Region of interest for detecting eyes within the face
+        roi_gray = gray[y:y + h, x:x + w]
+        roi_color = frame[y:y + h, x:x + w]
 
-# Check if the image is loaded correctly
-if img is None:
-    print("Error: Image not found or cannot be loaded!")
-    exit()  # exit if image is not loaded
-    
-# Convert image to grayscale
-gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    
-# Detect faces in the image
-faces = face_classifier.detectMultiScale(gray, 1.3, 5)
-    
-    #Check if faces are detected
-if len(faces) == 0:
-    print("No faces found!")
+        # Detect eyes within the face region
+        eyes = eye_cascade.detectMultiScale(roi_gray)
+        for (ex, ey, ew, eh) in eyes:
+            # Draw rectangle around the eyes
+            cv2.rectangle(roi_color, (ex, ey), (ex + ew, ey + eh), (0, 255, 0), 2)
 
-# Draw rectangles around detected faces and detect eyes within each face
-for (x, y, w, h) in faces:
-    # Draw a rectangle around the face
-    cv2.rectangle(img, (x, y), (x + w, y + h), (127, 0, 255), 2)
-    
-    # Region of interest (ROI) for face
-    roi_gray = gray[y:y + h, x:x + w]
-    roi_color = img[y:y + h, x:x + w]
-    
-    # Detect eyes within the face region
-    eyes = eye_classifier.detectMultiScale(roi_gray)
-    
-    for (ex, ey, ew, eh) in eyes:
-        # Draw rectangle around each detected eye
-        cv2.rectangle(roi_color, (ex, ey), (ex + ew, ey + eh), (255, 255, 0), 2)
+    return frame
 
-cv2.imshow('img', img)
+# Initialize webcam capture
+video_capture = cv2.VideoCapture(0)
 
-cv2.waitKey(0)  # Wait for a key press to close the window
-cv2.destroyAllWindows()  # Close all OpenCV windows
+# Check if the webcam is accessible
+if not video_capture.isOpened():
+    print("Error: Could not access the webcam.")
+    exit()
+
+print("Webcam opened successfully. Starting face and eye detection...")
+
+while True:
+    # Capture frame-by-frame
+    ret, frame = video_capture.read()
+
+    # If frame is not captured correctly, exit
+    if not ret:
+        print("Error: Failed to capture frame.")
+        break
+    # Convert the captured frame to grayscale for detection
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # Detect faces and eyes in the grayscale image
+    result_frame = detect_faces_and_eyes(gray, frame)
+
+# Display the resulting frame with detected faces and eyes
+    cv2.imshow('Face and Eye Detection', result_frame)
+
+# Exit the loop when 'q' key is pressed
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        print("Exiting...")
+        break
+
+# Release the webcam and close all OpenCV windows
+video_capture.release()
+cv2.destroyAllWindows()
